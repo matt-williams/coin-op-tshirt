@@ -23,9 +23,10 @@ XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 # base directory of the ESP8266 SDK package, absolute
 SDK_BASE	?= /opt/Espressif/ESP8266_SDK
 
-# esptool.py path and port
+# esptool.py path, port and baud rate
 ESPTOOL		?= esptool.py
 ESPPORT		?= /dev/ttyUSB0
+ESPBAUD		?= 9600
 
 # name for the target project
 TARGET		= app
@@ -129,7 +130,7 @@ $(FW_BASE):
 	$(Q) mkdir -p $@
 
 flash: $(FW_FILE_1) $(FW_FILE_2)
-	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FILE_1_ADDR) $(FW_FILE_1) $(FW_FILE_2_ADDR) $(FW_FILE_2)
+	$(ESPTOOL) --port $(ESPPORT) --baud $(ESPBAUD) write_flash $(FW_FILE_1_ADDR) $(FW_FILE_1) $(FW_FILE_2_ADDR) $(FW_FILE_2)
 
 clean:
 	$(Q) rm -rf $(FW_BASE) $(BUILD_BASE)

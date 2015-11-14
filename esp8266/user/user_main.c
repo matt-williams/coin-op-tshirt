@@ -5,38 +5,63 @@
 #include "user_config.h"
 #include "user_interface.h"
 
-#define user_procTaskPrio        0
-#define user_procTaskQueueLen    1
-os_event_t    user_procTaskQueue[user_procTaskQueueLen];
-static void loop(os_event_t *events);
+static ETSTimer pollTimer;
 
-//Main code function
-static void ICACHE_FLASH_ATTR
-loop(os_event_t *events)
-{
-    os_printf("Hello\n\r");
-    os_delay_us(10000);
-    system_os_post(user_procTaskPrio, 0, 0 );
+static void ICACHE_FLASH_ATTR pollTimerCb(void *arg) {
+  os_printf("Polling\n");
 }
 
-//Init function 
-void ICACHE_FLASH_ATTR
-user_init()
+// WiFi event callback
+static void ICACHE_FLASH_ATTR wifi_callback(System_Event_t *evt)
 {
-    char ssid[32] = SSID;
-    char password[64] = SSID_PASSWORD;
-    struct station_config stationConf;
+  os_printf( "Got WiFi event: %d\n", evt->event );
 
-    //Set station mode
-    wifi_set_opmode( 0x1 );
+  switch (evt->event)
+  {
+    case EVENT_STAMODE_CONNECTED:
+      os_printf("Connected to SSID %s, channel %d\n",
+                evt->event_info.connected.ssid,
+                evt->event_info.connected.channel);
+      break;
 
-    //Set ap settings
-    os_memcpy(&stationConf.ssid, ssid, 32);
-    os_memcpy(&stationConf.password, password, 64);
-    wifi_station_set_config(&stationConf);
+    case EVENT_STAMODE_DISCONNECTED:
+      os_printf("Disconnected from SSID %s, reason %d\n",
+                evt->event_info.disconnected.ssid,
+                evt->event_info.disconnected.reason);
+      break;
 
-    //Start os task
-    system_os_task(loop, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
+    case EVENT_STAMODE_GOT_IP:
+      os_printf("IP: " IPSTR ", Mask: " IPSTR ", Gateway: " IPSTR "\n",
+                IP2STR(&evt->event_info.got_ip.ip),
+                IP2STR(&evt->event_info.got_ip.mask),
+                IP2STR(&evt->event_info.got_ip.gw));
+      break;
+  }
+}
 
-    system_os_post(user_procTaskPrio, 0, 0 );
+// Init function 
+void ICACHE_FLASH_ATTR user_init()
+{
+  struct station_config stationConf;
+
+  // Enable GPIO
+  gpio_init();
+
+  // Set station mode
+  wifi_set_opmode_current(STATION_MODE);
+
+  // Set AP settings
+  os_memcpy(&stationConf.ssid, SSID, 32);
+  os_memcpy(&stationConf.password, SSID_PASSWORD, 64);
+  wifi_station_set_config(&stationConf);
+
+  // Set an event handler for WiFi events
+  wifi_set_event_handler_cb(wifi_callback);
+
+  // Start os task
+  os_timer_disarm(&pollTimer);
+  os_timer_setfn(&pollTimer, pollTimerCb, NULL);
+  os_timer_arm(&pollTimer, 5000, 1);
+
+  os_printf("user_init() complete!\n\r");
 }
