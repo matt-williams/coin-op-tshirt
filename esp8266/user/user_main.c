@@ -57,7 +57,7 @@ static void ICACHE_FLASH_ATTR wifi_callback(System_Event_t* evt)
                 IP2STR(&evt->event_info.got_ip.mask),
                 IP2STR(&evt->event_info.got_ip.gw));
       poll_timer_callback(NULL);
-      os_timer_arm(&poll_timer, 5000, 1);
+      os_timer_arm(&poll_timer, 2000, 1);
       break;
   }
 }
